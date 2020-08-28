@@ -1,0 +1,6 @@
+[submodule "vcpkg"]
+	path = vcpkg
+	url = https://github.com/microsoft/vcpkg.git
+[submodule "cpp-mmf"]
+	path = cpp-mmf
+	url = https://github.com/maxisoft/cpp-mmf.git
