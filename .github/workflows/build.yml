@@ -19,6 +19,8 @@ jobs:
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.0.1
+        with:
+          vs-version: '[16.4,17.0)'
           
       - uses: lukka/get-cmake@latest
   
@@ -29,10 +31,28 @@ jobs:
             vcpkgDirectory: '${{ github.workspace }}/vcpkg'
             setupOnly: true
       
-      - name: 'Run CMake'
+      - name: 'Run CMake (Debug)'
         uses: lukka/run-cmake@v2
         with:
           useVcpkgToolchainFile: true
           cmakeGenerator: VS16Win64
           buildDirectory: '${{ github.workspace }}/cmake-build-debug'
           cmakeBuildType: Debug
+
+      - name: 'Run CMake (Release)'
+        uses: lukka/run-cmake@v2
+        with:
+          useVcpkgToolchainFile: true
+          cmakeGenerator: VS16Win64
+          buildDirectory: '${{ github.workspace }}/cmake-build-release'
+          cmakeBuildType: Release
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: Debug build
+          path: ${{ github.workspace }}/cmake-build-debug
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: Release build
+          path: ${{ github.workspace }}/cmake-build-release
