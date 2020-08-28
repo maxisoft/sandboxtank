@@ -1,0 +1,31 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Build the project
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+        submodules: 'recursive'
+          
+      - uses: lukka/get-cmake@latest
+  
+      - name: Run vcpkg
+        uses: lukka/run-vcpkg@v2
+        with:
+            # Location of the vcpkg as submodule of the repository.
+            vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+      
+      - name: 'Run CMake'
+        uses: lukka/run-cmake@v2
+        with:
+          useVcpkgToolchainFile: true
