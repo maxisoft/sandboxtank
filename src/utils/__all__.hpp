@@ -1,5 +1,6 @@
 #pragma once
 #include "sys/__all__.hpp"
 #include "InterProcessMutex.hpp"
-#include "StringUtils.h"
+#include "StringUtils.hpp"
 #include "GuidUtils.hpp"
+#include "XorCipher.hpp"

@@ -7,7 +7,7 @@
 #include "../../../DesktopACL.h"
 #include "../../../sandbox/TokenProcess.hpp"
 #include "../../../sandbox/JobProcess.hpp"
-#include "../../StringUtils.h"
+#include "../../StringUtils.hpp"
 #include "../../../sandbox/config/Config.hpp"
 #include <cassert>
 #include <thread>
@@ -47,13 +47,13 @@ namespace maxisoft::utils::sys::safer
 
         explicit SAFE_PROCESS_INFORMATION() = default;
 
-        SAFE_PROCESS_INFORMATION(PROCESS_INFORMATION &&pi) : hProcess(pi.hProcess), hThread(pi.hThread),
+        explicit SAFE_PROCESS_INFORMATION(PROCESS_INFORMATION &&pi) : hProcess(pi.hProcess), hThread(pi.hThread),
                                                              dwProcessId(pi.dwProcessId), dwThreadId(pi.dwThreadId)
         {
             memset(std::addressof(pi), 0, sizeof(decltype(pi)));
         }
 
-        [[noreturn]] SAFE_PROCESS_INFORMATION &operator=(PROCESS_INFORMATION &&pi)
+        SAFE_PROCESS_INFORMATION &operator=(PROCESS_INFORMATION &&pi)
         {
             hProcess = pi.hProcess;
             hThread = pi.hThread;

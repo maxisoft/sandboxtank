@@ -1,35 +1,18 @@
 #pragma once
 
-#include "../../cpp-mmf/memory_mapped_file.hpp"
-#include "SharedMemory.hpp"
-#include "../DesktopACL.h"
-#include "TokenProcess.hpp"
-#include "JobProcess.hpp"
-#include "../utils/StringUtils.h"
-#include "config/Config.hpp"
-#include <cassert>
-#include <thread>
-#include "../utils/__all__.hpp"
 #include <fstream>
 #include <mutex>
-#include <ShlObj.h>
 #include <filesystem>
 #include <array>
 #include <optional>
 #include <map>
-#include <TlHelp32.h>
-#include <winsafer.h>
-#include <functional>
-#include <atomic>
-#include <sddl.h>
-#include <Psapi.h>
-#include <iostream>
-#include <UserEnv.h>
-#include <Windows.h>
 #include <vector>
 #include <tchar.h>
 #include <cstdio>
-#include "Globals.hpp"
+
+#include "../../cpp-mmf/memory_mapped_file.hpp"
+#include "config/Config.hpp"
+#include "../utils/__all__.hpp"
 
 namespace maxisoft::sandbox
 {

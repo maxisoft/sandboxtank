@@ -34,9 +34,16 @@ namespace maxisoft::utils::sys::safer
 
 		explicit HandleSafe(const HandleSafe& h) = delete;
 
-		~HandleSafe()
+		virtual ~HandleSafe()
 		{
-			cleanup();
+		    try
+		    {
+		        cleanup();
+		    }
+		    catch(std::exception&)
+            {
+                m_handle = NullValue;
+            }
 		}
 
 		inline Handle handle() const

@@ -9,7 +9,7 @@
 #include <optional>
 #include <nlohmann/json.hpp>
 #include "../../windows_include.hpp"
-#include "../../utils/StringUtils.h"
+#include "../../utils/StringUtils.hpp"
 #include "../../hash/hash.hpp"
 
 namespace maxisoft::sandbox::config

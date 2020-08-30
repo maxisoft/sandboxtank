@@ -21,7 +21,7 @@
 #include <thread>
 #include <cassert>
 #include "sandbox/config/Config.hpp"
-#include "utils/StringUtils.h"
+#include "utils/StringUtils.hpp"
 #include "sandbox/JobProcess.hpp"
 #include "sandbox/TokenProcess.hpp"
 #include "DesktopACL.h"
@@ -31,6 +31,9 @@
 #include "sandbox/Globals.hpp"
 #include "sandbox/ProgramArgs.hpp"
 #include "sandbox/JobProcess.hpp"
+#include "sandbox/ProcessContext.hpp"
+#include "sandbox/SharedMemData.hpp"
+#include "utils/XorCipher.hpp"
 
 void ThrowForNativeCallError(LPWSTR pszAPI, UINT codepage = CP_UTF8)
 {
@@ -114,148 +117,17 @@ void PrintProcessNameAndID(DWORD processID)
 }
 
 using namespace maxisoft::utils::sys::safer;
-struct ProcessContext
-{
 
 
-	DWORD pid;
-    ProcessHandle target_process_handle;
-	ProcessHandle explorer_handle;
-    ProcessHandle injected_parent_process;
-	std::array<wchar_t, 255> user_sid;
-
-	explicit ProcessContext() = default;
-	ProcessContext(const ProcessContext&) = delete;
-
-	ProcessContext(ProcessContext&& other) noexcept : pid(other.pid),
-	                                                  target_process_handle(std::move(other.target_process_handle)),
-	                                                  explorer_handle(std::move(other.explorer_handle)),
-	                                                  injected_parent_process(std::move(other.injected_parent_process)),
-	                                                  user_sid(other.user_sid)
-	{
-		other.cleanup();
-	}
-
-    [[noreturn]] void cleanup()
-	{
-		if (pid == GetCurrentProcessId())
-		{
-            for (DefaultSafeHandle& h : {std::ref(target_process_handle),
-                                         std::ref(explorer_handle),
-                                         std::ref(injected_parent_process)}) {
-                h.cleanup();
-            }
-		}
-		else
-        {
-            for (DefaultSafeHandle& h : {std::ref(target_process_handle),
-                                         std::ref(explorer_handle),
-                                         std::ref(injected_parent_process)}) {
-                h.detach();
-            }
-        }
-	}
-
-	~ProcessContext()
-	{
-		cleanup();
-	}
-
-	ProcessContext& operator=(ProcessContext&& other) noexcept
-	{
-		cleanup();
-		pid = other.pid;
-		target_process_handle = std::move(other.target_process_handle);
-		explorer_handle = std::move(other.explorer_handle);
-		injected_parent_process = std::move(other.injected_parent_process);
-		other.cleanup();
-		return *this;
-	}
-};
-
-struct SharedMemData
-{
-	using MagicArray = std::array<char, 20>;
-	MagicArray magic;
-	std::array<char, 65535> config;
-	uint64_t config_key;
-	size_t config_length;
-	DWORD time;
-	DWORD main_process;
-	uint64_t build_date_hash;
-	std::array<ProcessContext, 2> contexts;
-	std::array<char, 2048> error;
-
-	ProcessContext& get_current_context()
-	{
-		if (auto ctx = get_context(GetCurrentProcessId()))
-		{
-			return *ctx;
-		}
-		throw std::exception("unable to get current context");
-	}
-
-	std::optional<std::reference_wrapper<ProcessContext>> get_context(const DWORD pid)
-	{
-		for (auto& context : contexts)
-		{
-			if (context.pid == pid)
-			{
-				return std::ref(context);
-			}
-		}
-		return {};
-	}
-
-	explicit SharedMemData() : magic(s_magic_array),
-	                                                config(), config_key(), config_length(), time(),
-	                                                main_process(0),
-	                                                build_date_hash(s_build_date_hash), contexts(),
-													error()
-	{
-	}
-
-	bool valid() const
-	{
-		return magic == s_magic_array && build_date_hash == s_build_date_hash && config_length <= config.size();
-	}
-
-private:
-	static constexpr uint64_t s_build_date_hash = maxisoft::hash::hash64(__TIMESTAMP__);
-	static constexpr MagicArray s_magic_array = {'A', 'P', 'P', 'S', 'A', 'N', 'D', 'B', 'O', 'X', '1'};
-};
-
-constexpr uint64_t _BaseKey = uint64_t(__COUNTER__) ^ maxisoft::hash::hash64(__COUNTER__) ^ maxisoft::hash::
-	hash64(__TIMESTAMP__);
-
-template <typename T, uint64_t BaseKey = static_cast<uint64_t>(_BaseKey)>
-class XorCipher
-{
-public:
-	using type = std::enable_if_t<std::is_integral_v<T>, T>;
-
-	explicit XorCipher(const uint64_t key) : key_(key), counter_(0)
-	{
-	}
-
-	type operator()(const type x)
-	{
-		return static_cast<type>((BaseKey + maxisoft::hash::hash64(counter_++) + key_) ^ x);
-	}
-
-private:
-	uint64_t key_;
-	std::atomic_size_t counter_;
-};
-
-
-using SharedMemory = ::maxisoft::sandbox::SharedMemory<SharedMemData>;
+using SharedMemory = ::maxisoft::sandbox::SharedMemory<::maxisoft::sandbox::SharedMemData>;
 using maxisoft::sandbox::globals;
 
 static std::unique_ptr<SharedMemory> InitSharedMemory(std::wstring id)
 {
 
-    using maxisoft::hash::hash64;
+    using ::maxisoft::hash::hash64;
+    using ::maxisoft::sandbox::SharedMemData;
+    using ::maxisoft::utils::XorCipher;
 	auto shared_memory = std::make_unique<SharedMemory>(id);
 	SharedMemory& shmem = std::ref(*shared_memory.get());
 	SharedMemData& data = *shmem.data();
@@ -284,7 +156,7 @@ static std::unique_ptr<SharedMemory> InitSharedMemory(std::wstring id)
 			if (const auto explorer_process = ::maxisoft::utils::sys::GetExplorerProcess())
 			{
 				DuplicateHandle(globals.process(), explorer_process.handle(), globals.process(),
-				                data.contexts.at(0).explorer_handle.unsafe_get_ptr(), 0, false, DUPLICATE_SAME_ACCESS);
+				                std::addressof(data.contexts.at(0).explorer_handle), 0, false, DUPLICATE_SAME_ACCESS);
 			}
 			const auto def_token = maxisoft::sandbox::get_default_token(TOKEN_QUERY | TOKEN_READ | TOKEN_QUERY_SOURCE);
 			auto sid = maxisoft::sandbox::ObtainUserSidString(*def_token);
@@ -300,7 +172,9 @@ static std::unique_ptr<SharedMemory> InitSharedMemory(std::wstring id)
 
 static void InitAsChildProcess(SharedMemory& shared_memory)
 {
-    using Config = ::maxisoft::sandbox::Config;
+    using ::maxisoft::sandbox::Config;
+    using ::maxisoft::sandbox::SharedMemData;
+    using ::maxisoft::utils::XorCipher;
 	auto lock = shared_memory.get_lock();
 	SharedMemData& data = std::ref(*shared_memory.data());
 	if (!data.valid())
@@ -325,10 +199,10 @@ static void InitAsChildProcess(SharedMemory& shared_memory)
 			CloseHandle(data.get_current_context().explorer_handle);
 		}
 		if (!DuplicateHandle(globals.process(), explorer_process.handle(), globals.process(),
-		                     data.get_current_context().explorer_handle.unsafe_get_ptr(), 0, false,
+		                     std::addressof(data.get_current_context().explorer_handle), 0, false,
 		                     DUPLICATE_SAME_ACCESS))
 		{
-			data.get_current_context().explorer_handle.cleanup();
+			data.get_current_context().explorer_handle = ProcessHandle::NullValue;
 		}
 	}
 	shared_memory.flush();
@@ -413,7 +287,7 @@ int ForkAndContinueAsUser(const maxisoft::sandbox::ProgramArgs& args, SharedMemo
 				if (explorer_process &&
 					maxisoft::sandbox::AddTheAceProcess(explorer_process, usersid) &&
 					!DuplicateHandle(globals.process(), explorer_process, pi.hProcess,
-						sub_context.explorer_handle.unsafe_get_ptr(), 0, false, DUPLICATE_SAME_ACCESS))
+						std::addressof(sub_context.explorer_handle), 0, false, DUPLICATE_SAME_ACCESS))
 				{
 					throw std::exception("unable to duplicate explorer process");
 				}
@@ -427,7 +301,7 @@ int ForkAndContinueAsUser(const maxisoft::sandbox::ProgramArgs& args, SharedMemo
 
 				if (!maxisoft::sandbox::AddTheAceProcess(globals.process(), usersid) ||
 					!DuplicateHandle(globals.process(), globals.process(), pi.hProcess,
-						sub_context.injected_parent_process.unsafe_get_ptr(), 0, false, DUPLICATE_SAME_ACCESS))
+						std::addressof(sub_context.injected_parent_process), 0, false, DUPLICATE_SAME_ACCESS))
 				{
 					throw std::exception("unable to duplicate current process");
 				}
@@ -498,7 +372,6 @@ int ForkAndContinueAsUser(const maxisoft::sandbox::ProgramArgs& args, SharedMemo
 			if (auto& p = shared_memory.data()->get_current_context().target_process_handle)
 			{
 				TerminateProcess(p, EXIT_FAILURE);
-				p.cleanup();
 				shared_memory.flush();
 			}
 		}
@@ -542,7 +415,7 @@ int wmain(int argc, wchar_t* argv[], wchar_t* envp[])
 		auto guid = args.sessionid ? *args.sessionid : maxisoft::utils::UUIDToString(maxisoft::utils::GenerateUUID());
 
 		shared_memory = InitSharedMemory(guid);
-		SharedMemData& data = std::ref(*shared_memory->data());
+		maxisoft::sandbox::SharedMemData& data = std::ref(*shared_memory->data());
 
 		const bool is_main_process = data.main_process == GetCurrentProcessId();
 

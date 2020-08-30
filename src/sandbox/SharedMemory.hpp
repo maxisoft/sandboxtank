@@ -8,7 +8,7 @@
 
 #include "../windows_include.hpp"
 #include "../../cpp-mmf/memory_mapped_file.hpp"
-#include "../utils/StringUtils.h"
+#include "../utils/StringUtils.hpp"
 #include "../utils/sys/safer/HandleSafe.hpp"
 #include "../utils/InterProcessMutex.hpp"
 
@@ -58,6 +58,7 @@ namespace maxisoft::sandbox
                 permissions(path_, std::filesystem::perms::group_all | std::filesystem::perms::others_all,
                             std::filesystem::perm_options::replace, err);
                 initialize_data_content(data());
+
             }
         }
 
@@ -73,7 +74,14 @@ namespace maxisoft::sandbox
 
         ~SharedMemory()
         {
-            remove();
+            try
+            {
+                remove();
+            }
+            catch (std::exception &)
+            {
+            }
+
         }
 
         Data *data()
@@ -96,7 +104,8 @@ namespace maxisoft::sandbox
                     std::filesystem::remove(path_, err);
                     if (err)
                     {
-                        auto msg = std::string("unable to remove file: ") + path_.string() + " error code: " + std::to_string(err.value());
+                        auto msg = std::string("unable to remove file: ") + path_.string() + " error code: " +
+                                   std::to_string(err.value());
                         throw std::exception(msg.c_str());
                     }
                 }
@@ -170,6 +179,7 @@ namespace maxisoft::sandbox
                 std::is_move_assignable_v<T>> * = nullptr)
         {
             assert(ptr != nullptr);
+            SecureZeroMemory(ptr, sizeof(T));
             *ptr = std::move(T{});
         }
 
@@ -180,14 +190,14 @@ namespace maxisoft::sandbox
                 is_move_assignable_v<T>> * = nullptr)
         {
             assert(ptr != nullptr);
+            SecureZeroMemory(ptr, sizeof(T));
             *ptr = T{};
         }
 
         template<class T = Data>
         static void initialize_data_content(T *ptr, std::enable_if_t<
                 !std::is_default_constructible_v<T> ||
-                !(std::is_move_assignable_v<T> || std::
-                is_move_assignable_v<T>)> * = nullptr)
+                !std::is_move_assignable_v<T>> * = nullptr)
         {
             assert(ptr != nullptr);
             SecureZeroMemory(ptr, sizeof(T));
