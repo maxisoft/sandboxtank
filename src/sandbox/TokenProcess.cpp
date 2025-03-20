@@ -108,8 +108,8 @@ namespace maxisoft::sandbox
 
         ConvertStringSidToSid(TEXT("S-1-5-114"), &adminSID.at(1).Sid);
         ConvertStringSidToSid(TEXT("S-1-5-32-544"), &adminSID.at(2).Sid);
-        adminSID.at(3).Sid = detail::create_well_known_sid(WinBuiltinAdministratorsSid);
-        adminSID.at(4).Sid = detail::create_well_known_sid(WinAccountAdministratorSid);
+        adminSID.at(3).Sid = detail::create_well_known_sid<false>(WinBuiltinAdministratorsSid);
+        adminSID.at(4).Sid = detail::create_well_known_sid<false>(WinAccountAdministratorSid);
 
         for (auto it = adminSID.begin(); it != adminSID.end();)
         {

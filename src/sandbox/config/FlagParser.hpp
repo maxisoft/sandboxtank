@@ -30,7 +30,7 @@ namespace maxisoft::sandbox::config
         template<class Container>
         FlagParser(const Container &flags, const std::string &prefix) noexcept : FlagParser(std::cbegin(flags),
                                                                                             std::cend(flags),
-                                                                                            prefix),
+                                                                                            prefix)
         {
 
         }

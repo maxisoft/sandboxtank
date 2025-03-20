@@ -35,7 +35,7 @@
 #include "sandbox/SharedMemData.hpp"
 #include "utils/XorCipher.hpp"
 
-void ThrowForNativeCallError(LPWSTR pszAPI, UINT codepage = CP_UTF8)
+void ThrowForNativeCallError(LPCWSTR pszAPI, UINT codepage = CP_UTF8)
 {
 	LPVOID lpvMessageBuffer;
 

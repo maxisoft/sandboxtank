@@ -103,7 +103,7 @@ namespace maxisoft::sandbox
             auto &arg = ret.additional_args.back();
             auto arg_view = trim(std::wstring_view(arg));
             arg_view.remove_prefix(arg_view.front() == L'"' ? 1 : 0);
-            accept_additional_args &= wstring_starts_with<MAX_PATH>(arg_view, L"--");
+            accept_additional_args &= !wstring_starts_with<MAX_PATH>(arg_view, L"--");
             if (accept_additional_args)
             {
                 if (wstring_starts_with<MAX_PATH>(arg_view, L"/sid:"))

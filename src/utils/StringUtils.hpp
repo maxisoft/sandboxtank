@@ -229,38 +229,32 @@ namespace maxisoft::utils
     }
 
     template<typename T>
-    std::basic_string_view<T> trim(const std::basic_string_view<T> &s)
+    std::basic_string_view<T> trim(const std::basic_string_view<T>& s, T c)
     {
         std::basic_string_view<T> ret = s;
-        bool stable = false;
-        while (!stable)
-        {
-            stable = true;
-            for (const T c : {T(' '), T('\t'), T('\n'), T('\r')})
-            {
-                size_t prev = ret.size();
-                ret = trim<T>(ret, c);
-                stable &= (ret.size() == prev);
-            }
+        while (!ret.empty() && ret.front() == c) {
+            ret.remove_prefix(1);
         }
-
+        while (!ret.empty() && ret.back() == c) {
+            ret.remove_suffix(1);
+        }
         return ret;
     }
 
+    // One-parameter version second
     template<typename T>
-    std::basic_string_view<T> trim(const std::basic_string_view<T> &s, T c)
+    std::basic_string_view<T> trim(const std::basic_string_view<T>& s)
     {
         std::basic_string_view<T> ret = s;
-        while (!ret.empty() && ret.front() == c)
-        {
-            ret.remove_prefix(1);
+        bool stable = false;
+        while (!stable) {
+            stable = true;
+            for (const T c : {T(' '), T('\t'), T('\n'), T('\r')}) {
+                size_t prev = ret.size();
+                ret = trim<T>(ret, c);  // Now correctly references the already-declared two-param version
+                stable &= (ret.size() == prev);
+            }
         }
-
-        while (!ret.empty() && ret.back() == c)
-        {
-            ret.remove_suffix(1);
-        }
-
         return ret;
     }
 }
